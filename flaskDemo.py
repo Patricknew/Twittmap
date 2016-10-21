@@ -1,6 +1,22 @@
 from flask import Flask, render_template
+from elasticsearch import Elasticsearch, RequestsHttpConnection
+from requests_aws4auth import AWS4Auth
+from key import access_key, secret_key
 app = Flask(__name__)
 
+host = 'search-twittmap-gd24ezicbcw3tycn7wkpyiv2li.us-west-2.es.amazonaws.com'
+awsauth = AWS4Auth(access_key, secret_key, 'us-west-2', 'es')
+es = Elasticsearch(
+    hosts=[{'host': host, 'port': 443}],
+    http_auth=awsauth,
+    use_ssl=True,
+    verify_certs=True,
+    connection_class=RequestsHttpConnection
+)
+print(es.info())
+
+res = es.search(index='index', doc_type='twitter')
+print res['hits']['hits']
 @app.route('/', methods=["GET"])
 def index():
     return render_template('googleMap.html')
