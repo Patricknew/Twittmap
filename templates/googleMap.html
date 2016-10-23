@@ -47,7 +47,7 @@
           display: none;
           position: absolute;
           background-color: #f9f9f9;
-          min-width: 160px;
+          min-width: 145px;
           box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
       }
 
@@ -56,48 +56,41 @@
           padding: 12px 16px;
           text-decoration: none;
           display: block;
-          text-align: left;
+          text-align: center;
       }
 
       .dropdown-content a:hover {background-color: #f1f1f1}
 
       .show {display:block;}
     </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   </head>
   <body>
-    <!-- <input type="text" id="query"  -->
     <ul>
       <li><a class="active" href="#home">Home</a></li>
       <li class="dropdown">
-        <a class="dropbtn" onclick="myFunction()">Keywords Search</a>
+        <a class="dropbtn" onclick="showDrop()">Keywords Search</a>
         <div class="dropdown-content" id="myDropdown">
-          <a>Trump</a>
-          <a>Hillary</a>
-          <a>Election</a>
+          <form action="/">
+            <a onclick="keySelect('Trump')">Trump</a>
+            <a onclick="keySelect('Hillary')">Hillary</a>
+            <a onclick="keySelect('election')">election</a>
+            <a onclick="keySelect('debate')">debate</a>
+            <a onclick="keySelect('love')">love</a>
+            <a onclick="keySelect('game')">game</a>
+            <a onclick="keySelect('apple')">apple</a>
+            <a onclick="keySelect('fun')">fun</a>
+            <a onclick="keySelect('hashtag')">hashtag</a>
+            <a onclick="keySelect('music')">music</a>
+            <a onclick="keySelect('sports')">sports</a>
+            <a onclick="keySelect('food')">food</a>
+          </form>
         </div>
       </li>
     </ul>
     <div id="map"></div>
     <script>
-      var map;
-      var citymap = {
-        chicago: {
-          center: {lat: 41.878, lng: -87.629},
-          population: 2714856
-        },
-        newyork: {
-          center: {lat: 40.714, lng: -74.005},
-          population: 8405837
-        },
-        losangeles: {
-          center: {lat: 34.052, lng: -118.243},
-          population: 3857799
-        },
-        vancouver: {
-          center: {lat: 49.25, lng: -123.1},
-          population: 603502
-        }
-      };
+      var map, circle, circleArray=[], infoWinArray=[];
 
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -105,31 +98,11 @@
           zoom: 2,
           mapTypeId: 'terrain'
         });
-        var infoWin = new google.maps.InfoWindow({content:'hello'});
-        // var script = document.createElement("script");
-        // script.src = 'https://developers.google.com/maps/documentation/javascript/examples/json/earthquake_GeoJSONP.js';
-        // document.getElementsByTagName('head')[0].appendChild(script);
-        for (var city in citymap) {
-          var circles = new google.maps.Circle(getCircle(city));
-          infoBubble(circles, infoWin);
-        }
-        // var circles = new google.maps.Circle({
-        //   path: google.maps.SymbolPath.CIRCLE,
-        //   clickable: true,
-        //   fillColor: 'red',
-        //   fillOpacity: .2,
-        //   scale: Math.pow(2, 5) /2,
-        //   strokeColor: 'white',
-        //   strokeWeight: .5});
-
-        // map.data.setStyle(function(feature){
-        //   // var magnitude = feature.getProperty('mag');
-        //   return {
-        //     // icon: getCircle(magnitude)
-        //     icon: circles
-        //   };
+        // google.maps.event.addListener(map, 'click', function() {
+        // if (infowindow) {
+        //     infowindow.close();
+        // }
         // });
-
       }
 
       function infoBubble(circles, infoWin) {
@@ -138,12 +111,10 @@
           infoWin.setPosition(circles.getCenter());
           infoWin.open(map);
         })
-        // google.maps.event.addDomListener(window, 'load', initMap);
       }
-      function getCircle(city) {
+      function getCircle(geo) {
         return {
-          // path: google.maps.SymbolPath.CIRCLE,
-          center: citymap[city].center,
+          center: {lat: geo[1], lng: geo[0]},
           clickable: true,
           fillColor: 'red',
           fillOpacity: 1,
@@ -151,19 +122,44 @@
           strokeColor: 'white',
           strokeWeight: .5,
           map: map,
-          radius: Math.sqrt(citymap[city].population) * 100
+          radius: 100000
         };
       }
 
-      // function eqfeed_callback(results) {
-      //   map.data.addGeoJson(results);
-      // }
       /* When the user clicks on the button,
       toggle between hiding and showing the dropdown content */
-      function myFunction() {
-          document.getElementById("myDropdown").classList.toggle("show");
+      function showDrop() {
+        document.getElementById("myDropdown").classList.toggle("show");
       }
 
+      function keySelect(key) {
+        if (circleArray != []) {
+          for (var i = circleArray.length - 1; i >= 0; i--) {
+            circleArray[i].setMap(null);
+            infoWinArray[i].close();
+          };
+        }
+        $.ajax({
+            url: '/queryES/'+key,
+            data: $('form').serialize(),
+            type: 'POST',
+            success: function(response) {
+                var geo=[], tweet=[];
+                for (var i = response.length - 1; i >= 0; i--) {
+                  geo = response[i]._source.coordinates;
+                  tweet = response[i]._source.tweet;
+                  circle = new google.maps.Circle(getCircle(geo));
+                  circleArray.push(circle);
+                  infoWin = new google.maps.InfoWindow({content:tweet});
+                  infoWinArray.push(infoWin);
+                  infoBubble(circle, infoWin);
+                };
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+      }
       // Close the dropdown if the user clicks outside of it
       window.onclick = function(e) {
         if (!e.target.matches('.dropbtn')) {
