@@ -71,7 +71,6 @@
       <li class="dropdown">
         <a class="dropbtn" onclick="showDrop()">Keywords Search</a>
         <div class="dropdown-content" id="myDropdown">
-          <form action="/">
             <a onclick="keySelect('Trump')">Trump</a>
             <a onclick="keySelect('Hillary')">Hillary</a>
             <a onclick="keySelect('election')">election</a>
@@ -84,7 +83,6 @@
             <a onclick="keySelect('music')">music</a>
             <a onclick="keySelect('sports')">sports</a>
             <a onclick="keySelect('food')">food</a>
-          </form>
         </div>
       </li>
     </ul>
@@ -98,11 +96,11 @@
           zoom: 2,
           mapTypeId: 'terrain'
         });
-        // google.maps.event.addListener(map, 'click', function() {
-        // if (infowindow) {
-        //     infowindow.close();
-        // }
-        // });
+        google.maps.event.addListener(map, 'click', function(event) {
+          var latitude = event.latLng.lat();
+          var longitude = event.latLng.lng();
+          console.log( latitude + ', ' + longitude );
+        });
       }
 
       function infoBubble(circles, infoWin) {
@@ -114,7 +112,7 @@
       }
       function getCircle(geo) {
         return {
-          center: {lat: geo[1], lng: geo[0]},
+          center: {lat: parseFloat(geo[1]), lng: parseFloat(geo[0])},
           clickable: true,
           fillColor: 'red',
           fillOpacity: 1,
@@ -146,7 +144,7 @@
             success: function(response) {
                 var geo=[], tweet=[];
                 for (var i = response.length - 1; i >= 0; i--) {
-                  geo = response[i]._source.coordinates;
+                  geo = response[i]._source.coordinates.split(",");
                   tweet = response[i]._source.tweet;
                   circle = new google.maps.Circle(getCircle(geo));
                   circleArray.push(circle);
