@@ -26,7 +26,7 @@
           float: left;
       }
 
-      li a, .dropbtn {
+      li a, .dropbtn, li span {
           display: inline-block;
           color: white;
           text-align: center;
@@ -85,6 +85,7 @@
             <a onclick="keySelect('food')">food</a>
         </div>
       </li>
+      <li><span class="active">Click On Map To Show Tweets Within 100KM</span></li>
     </ul>
     <div id="map"></div>
     <script>
@@ -99,7 +100,8 @@
         google.maps.event.addListener(map, 'click', function(event) {
           var latitude = event.latLng.lat();
           var longitude = event.latLng.lng();
-          console.log( latitude + ', ' + longitude );
+          // console.log(latitude+','+longitude);
+          clickSelect(latitude, longitude);
         });
       }
 
@@ -115,7 +117,7 @@
           center: {lat: parseFloat(geo[1]), lng: parseFloat(geo[0])},
           clickable: true,
           fillColor: 'red',
-          fillOpacity: 1,
+          fillOpacity: .5,
           scale: Math.pow(2, 5) /2,
           strokeColor: 'white',
           strokeWeight: .5,
@@ -144,9 +146,10 @@
             success: function(response) {
                 var geo=[], tweet=[];
                 for (var i = response.length - 1; i >= 0; i--) {
-                  geo = response[i]._source.coordinates.split(",");
+                  geo = response[i]._source.location.split(",");
+                  var latlon = [geo[1],geo[0]];
                   tweet = response[i]._source.tweet;
-                  circle = new google.maps.Circle(getCircle(geo));
+                  circle = new google.maps.Circle(getCircle(latlon));
                   circleArray.push(circle);
                   infoWin = new google.maps.InfoWindow({content:tweet});
                   infoWinArray.push(infoWin);
@@ -170,6 +173,39 @@
             }
           }
         }
+      }
+
+      function clickSelect(latitude, longitude) {
+        if (circleArray != []) {
+          for (var i = circleArray.length - 1; i >= 0; i--) {
+            circleArray[i].setMap(null);
+            infoWinArray[i].close();
+          };
+        }
+        var clickCoordinates = [latitude, longitude];
+        $.ajax({
+            url: '/queryClick/'+ clickCoordinates,
+            data: $('form').serialize(),
+            type: 'POST',
+            success: function(response, clickCoordinates) {
+                // console.log(response);
+                var geo=[], tweet=[];
+                for (var i = response.length - 1; i >= 0; i--) {
+                  // console.log(response[i]);
+                  geo = response[i]._source.location.split(",");
+                  var latlon = [geo[1],geo[0]];
+                  tweet = response[i]._source.tweet;
+                  circle = new google.maps.Circle(getCircle(latlon));
+                  circleArray.push(circle);
+                  infoWin = new google.maps.InfoWindow({content:tweet});
+                  infoWinArray.push(infoWin);
+                  infoBubble(circle, infoWin);
+                };
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
       }
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCegt_PLTgBdxVQN9Dh7ArKKQDoPgCFxAA&callback=initMap"
